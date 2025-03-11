@@ -1,0 +1,4 @@
+[31merror[0m: type not defined
+[34minfo[0m: maybe try again
+[32mdebug[0m try other [32mdebug[0m settings
+[34minfo[0m: warning, it is useful to [33mwarn[0m the user about the [31merror[0m or errors the program may output

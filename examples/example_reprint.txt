@@ -1,0 +1,4 @@
+error: type not defined
+info: maybe try again
+debug try other debug settings
+info: warning, it is useful to warn the user about the error or errors the program may output
