@@ -1,7 +1,7 @@
 # Zsh Scripts
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-![GitHub Tag](https://img.shields.io/github/v/tag/Lu-all/zsh_scripts)
+[![GitHub Tag](https://img.shields.io/github/v/tag/Lu-all/zsh_scripts)](https://github.com/Lu-all/zsh_scripts/releases/)
 
 
 This repository contains a collection of Zsh scripts designed to make your life easier. For detailed options and examples, run each script with the `-h` flag.
@@ -105,10 +105,10 @@ This repository contains a collection of Zsh scripts designed to make your life 
 
 ### Multiple mkdir
 
-- **File:** `multiple_mkdir.sh` (suggested alias: `mmkdir`)
+- **File:** `mmkdir.sh`
 - **Description:** This script creates multiple subdirectories under the current path with names from `pattern&min` to `pattern&max`.
-- **Usage:** `multiple_mkdir.sh <pattern> <min> <max>`
-- **Example:** `multiple_mkdir.sh folder 1 5` will create folders `folder1`, `folder2`, `folder3`, `folder4`, `folder5`.
+- **Usage:** `mmkdir.sh <pattern> <min> <max>`
+- **Example:** `mmkdir.sh folder 1 5` will create folders `folder1`, `folder2`, `folder3`, `folder4`, `folder5`.
 - **Good-to-know behavior:**
   - Uses the `mkdir` command.
   - It starts creating folders from the `<min>` to `<max>`.
