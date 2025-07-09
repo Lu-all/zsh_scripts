@@ -20,5 +20,10 @@ name=$2
 temporal_file=$RANDOM
 chmod +x $file
 ln -s $file $temporal_file
-sudo cp $temporal_file /usr/local/bin/$name
+timeout 100 sudo cp $temporal_file /usr/local/bin/$name
+if [ $? -eq 124 ]; then
+    echo "Error: Failed to copy file to /usr/local/bin. Insufficient permissions."
+    rm $temporal_file
+    exit 2
+fi
 rm $temporal_file

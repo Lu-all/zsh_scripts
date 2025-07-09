@@ -14,37 +14,70 @@ if [ "$1" = "-h" ]; then
 fi
 
 if [ "$#" -ne 5 ]; then
-    echo "Illegal number of parameters"
+    echo "Error: Illegal number of parameters"
     echo "Usage: copy_pattern <initial_file_folder> <filename> <min> <max> <repeated_pattern>"
     echo "(Or use -h for help)"
     exit 1
 fi
 
-# This line sets the variable 'current_folder' to the first argument passed to the script
+# Set variables
 parent_path=$(pwd)
 echo "Parent path:" $parent_path
 
-#This line sets the variable 'initial_file_folder' to the first argument passed to the script
 initial_file_folder=$1
 echo "Initial file folder:" $initial_file_folder
 
-# This line sets the variable 'filename' to the second argument passed to the script
 filename=$2
 echo "Filename:" $filename
 
-# This line sets the variable 'min' to the third argument passed to the script
 min=$3
 echo "Min:" $min
 
-# This line sets the variable 'max' to the fourth argument passed to the script
 max=$4
 echo "Max:" $max
 
-# This line sets the variable 'repeated_pattern' to the fifth argument passed to the script
 pattern=$5
 echo "Repeated pattern:" $pattern
 
 initial_file=$parent_path/$initial_file_folder/$filename
 echo "Initial file:" $initial_file"\n"
 
-for i in {$min..$max}; do echo "copying " $initial_file_folder/$filename " into " $pattern$i/$filename; cp $initial_file $parent_path/$pattern$i/$filename; done
+# Validate that min and max are integers
+if ! [[ "$min" =~ ^[0-9]+$ ]] || ! [[ "$max" =~ ^[0-9]+$ ]]; then
+    echo "Error: <min> and <max> must be positive integers."
+    exit 1
+fi
+
+# Validate that min is less than or equal to max
+if [ "$min" -gt "$max" ]; then
+    echo "Error: <min> must be less than or equal to <max>."
+    exit 1
+fi
+
+# Check if the initial file exists
+if [ ! -f "$initial_file" ]; then
+    echo "Error: Initial file '$initial_file' does not exist."
+    exit 1
+fi
+
+# Copy the file into the directories
+for i in $(seq "$min" "$max"); do
+    target_dir="$parent_path/$pattern$i"
+    target_file="$target_dir/$filename"
+
+    # Create the target directory if it doesn't exist
+    if [ ! -d "$target_dir" ]; then
+        echo "Creating directory: $target_dir"
+        if ! mkdir -p "$target_dir"; then
+            echo "Error: Failed to create directory '$target_dir'." >&2
+            continue
+        fi
+    fi
+
+    # Copy the file
+    echo "Copying $initial_file to $target_file"
+    if ! cp "$initial_file" "$target_file"; then
+        echo "Error: Failed to copy '$initial_file' to '$target_file'." >&2
+        continue
+    fi
+done

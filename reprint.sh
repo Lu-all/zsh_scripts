@@ -27,4 +27,10 @@ if [ -z "$REPRINT_PATH" ]; then
     read REPRINT_PATH
 fi
 
-python $REPRINT_PATH "$@"
+# Check input file
+if [ ! -f "$1" ]; then
+    echo "Input file does not exist: $1"
+    exit 1
+fi
+
+python3 $REPRINT_PATH "$@"

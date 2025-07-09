@@ -2,7 +2,7 @@
 
 if [ "$1" = "-h" ]; then
     echo "Usage: mmkdir <pattern> <min> <max>"
-    echo "This script creates multiple subdirectories under the current path with name from pattern&min to pattern&max."
+    echo "This script creates multiple subdirectories under the current path with names from pattern&min to pattern&max."
     echo "For example, mmkdir folder 1 5 will create folders folder1, folder2, folder3, folder4, folder5"
     echo "Arguments:"
     echo "  <pattern>              The name of the directories to be created"
@@ -12,26 +12,43 @@ if [ "$1" = "-h" ]; then
 fi
 
 if [ "$#" -ne 3 ]; then
-    echo "Illegal number of parameters"
-    echo "Usage: mmkdir <repeated_pattern> <min> <max>"
+    echo "Error: Illegal number of parameters"
+    echo "Usage: mmkdir <pattern> <min> <max>"
     echo "(Or use -h for help)"
     exit 1
 fi
 
-# This line sets the variable 'current_folder' to the first argument passed to the script
+# Validate that min and max are integers
+if ! [[ "$2" =~ ^[0-9]+$ ]] || ! [[ "$3" =~ ^[0-9]+$ ]]; then
+    echo "Error: <min> and <max> must be positive integers."
+    exit 1
+fi
+
+# Validate that min is less than or equal to max
+if [ "$2" -gt "$3" ]; then
+    echo "Error: <min> must be less than or equal to <max>."
+    exit 1
+fi
+
+# Set variables
 parent_path=$(pwd)
 echo "Parent path:" $parent_path
 
-# This line sets the variable 'repeated_pattern' to the fifth argument passed to the script
 pattern=$1
 echo "Repeated pattern:" $pattern
 
-# This line sets the variable 'min' to the third argument passed to the script
 min=$2
 echo "Min:" $min
 
-# This line sets the variable 'max' to the fourth argument passed to the script
 max=$3
 echo "Max:" $max
 
-for i in {$min..$max}; do echo "creating directory " $pattern$i; mkdir $parent_path/$pattern$i; done
+# Create directories
+for i in $(seq $min $max); do
+    dir_path="$parent_path/$pattern$i"
+    echo "Creating directory: $dir_path"
+    if ! mkdir "$dir_path"; then
+        echo "Error: Failed to create directory '$dir_path'." >&2
+        exit 2
+    fi
+done

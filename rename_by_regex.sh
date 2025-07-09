@@ -35,6 +35,12 @@ DIR=${modified_params[1]}
 SOURCE_REGEX=${modified_params[2]}
 DESTINATION_REGEX=${modified_params[3]}
 
+# Check if the directory exists
+if [ ! -d "$DIR" ]; then
+  echo "Error: Directory '$DIR' does not exist." >&2
+  exit 1
+fi
+
 if [ $transformation = true ]; then
   echo "Transforming REGEX $SOURCE_REGEX"
   SOURCE_REGEX=$(echo "$SOURCE_REGEX" | sed -E 's/\\d/[0-9]/' | sed -E 's/\\w/[a-zA-Z]/' | sed -E 's/\$([0-9]+)/\\\1/')
@@ -48,46 +54,63 @@ fi
 # Obtain a random number
 RANDOM_NUMBER=$RANDOM
 # Make a safe directory
-mkdir "$DIR/$RANDOM_NUMBER"
+BACKUP_DIR="$DIR/$RANDOM_NUMBER"
+if ! mkdir "$BACKUP_DIR"; then
+  echo "Error: Failed to create backup directory '$BACKUP_DIR'." >&2
+  exit 1
+fi
 
 echo "Renaming files in $DIR that match $SOURCE_REGEX to $DESTINATION_REGEX"
 
 # Iterate on all files in DIR or subfolders
-find "$DIR" | while read FILE; do
-# Obtain the name of the file without path
-FILENAME=$(basename "$FILE")
-# Obtain file path
-DIRNAME=$(dirname "$FILE")
-  
-# Verify if the name of the file coincides with the pattern and is not directory $RANDOM
-if echo "$FILENAME" | grep -Eq "$SOURCE_REGEX" && [ "$FILENAME" != "$RANDOM_NUMBER" ]; then
-  echo "Match found for $FILENAME"
-  # Generate the new file name
-  NEW_NAME=$(echo "$FILENAME" | sed -E "s/$SOURCE_REGEX/$DESTINATION_REGEX/")
-  
-  # Make a safe copy of the file
-  if [ "$(uname)" = "Darwin" ]; then
-    # if "$DIR/$RANDOM_NUMBER/$FILENAME" exists, then copy with different name
-    if [ -f "$DIR/$RANDOM_NUMBER/$FILENAME" ]; then
-      cp "$FILE" "$DIR/$RANDOM_NUMBER/$FILENAME$iterative"
-      ((iterative++))
+function rename_file {
+  local FILE=$1
+  # Obtain the name of the file without path
+  local FILENAME=$(basename "$FILE")
+  # Obtain file path
+  local DIRNAME=$(dirname "$FILE")
+
+  # Verify if the name of the file matches the pattern and is not the backup directory
+  if echo "$FILENAME" | grep -Eq "$SOURCE_REGEX" && [ "$FILENAME" != "$RANDOM_NUMBER" ]; then
+    echo "Match found for $FILENAME"
+    # Generate the new file name
+    local NEW_NAME=$(echo "$FILENAME" | sed -E "s/$SOURCE_REGEX/$DESTINATION_REGEX/")
+
+    # Make a safe copy of the file
+    if [ "$(uname)" = "Darwin" ]; then
+      if [ -f "$BACKUP_DIR/$FILENAME" ]; then
+        cp "$FILE" "$BACKUP_DIR/$FILENAME$iterative" || { echo "Error: Failed to copy '$FILE' to backup directory." >&2; exit 1; }
+        ((iterative++))
+      else
+        cp "$FILE" "$BACKUP_DIR/$FILENAME" || { echo "Error: Failed to copy '$FILE' to backup directory." >&2; exit 1; }
+      fi
     else
-      cp "$FILE" "$DIR/$RANDOM_NUMBER/$FILENAME"
+      cp -r --backup=t "$FILE" "$BACKUP_DIR/$FILENAME" || { echo "Error: Failed to copy '$FILE' to backup directory." >&2; exit 1; }
     fi
-  else
-    cp -r --backup=t "$FILE" "$DIR/$RANDOM_NUMBER/$FILENAME"
+
+    # Rename the file
+    echo "    Renaming $FILENAME to $NEW_NAME"
+    if ! mv "$FILE" "$DIRNAME/$NEW_NAME"; then
+      echo "Error: Failed to rename '$FILENAME' to '$NEW_NAME'." >&2
+      exit 1
+    fi
   fi
-  # Rename the file
-  echo "    Renaming $FILENAME to $NEW_NAME"
-  mv "$FILE" "$DIRNAME/$NEW_NAME"
-  fi
+}
+
+#export -f rename_file
+#find "$DIR" -type f -exec zsh -c 'rename_file "$0"' {} \;
+find "$DIR" -type f | while read -r file; do
+  rename_file "$file"
 done
 
-echo "Files renamed. Backup directory: $DIR/$RANDOM_NUMBER"
+echo "Files renamed. Backup directory: $BACKUP_DIR"
 echo "Remove backup directory? Y/[N]"
 read -r REMOVE
 if [ "$REMOVE" = "Y" ]; then
-  rm -rf "$DIR/$RANDOM_NUMBER"
+  if ! rm -rf "$BACKUP_DIR"; then
+    echo "Error: Failed to remove backup directory '$BACKUP_DIR'." >&2
+    exit 1
+  fi
 fi
 
 echo "Done"

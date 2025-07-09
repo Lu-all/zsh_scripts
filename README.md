@@ -1,5 +1,9 @@
 # Zsh Scripts
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+![GitHub Tag](https://img.shields.io/github/v/tag/Lu-all/zsh_scripts)
+
+
 This repository contains a collection of Zsh scripts designed to make your life easier. For detailed options and examples, run each script with the `-h` flag.
 
 ## Available Scripts
@@ -11,6 +15,7 @@ This repository contains a collection of Zsh scripts designed to make your life 
 - [Zsh Scripts](#zsh-scripts)
   - [Available Scripts](#available-scripts)
     - [Add to path](#add-to-path)
+    - [Check app leftovers](#check-app-leftovers)
     - [Copy pattern](#copy-pattern)
     - [Git combine](#git-combine)
     - [Multiple mkdir](#multiple-mkdir)
@@ -18,6 +23,7 @@ This repository contains a collection of Zsh scripts designed to make your life 
     - [Rename by RegEx](#rename-by-regex)
     - [Replace shared name](#replace-shared-name)
     - [Reprint](#reprint)
+    - [Search article](#search-article)
 
 <!-- /code_chunk_output -->
 
@@ -28,6 +34,13 @@ This repository contains a collection of Zsh scripts designed to make your life 
 - **Usage:** `add_to_path.sh <source_file> <name_of_command>`
 - **Example:** `add_to_path.sh my_script.sh test_script` will make `my_script.sh` available as `test_script`.
 - **Good-to-know behavior:**
+  - To add `add_to_path.sh` to the path, you need to manually execute the following commands:
+    ```
+    chmod +x add_to_path.sh
+    ln -s add_to_path.sh add
+    sudo cp add /usr/local/bin/add_to_path
+    rm add
+    ```
   - If the command already exists, it will be overwritten.
   - It creates a temporary file with a random name (it is deleted at the end of execution).
   - The root password is required to copy the soft link created to `/usr/local/bin/`.
@@ -37,6 +50,28 @@ This repository contains a collection of Zsh scripts designed to make your life 
 |---------------------|-------------------------------------------|
 | `<source_file>`     | The **executable** file to be added to the path |
 | `<name_of_command>` | The name of the command to be created |
+
+### Check app leftovers
+
+- **File:** `Darwin-exclusive/check_app_leftovers.sh`
+- **Description:** This script checks for leftover files of a specified application in various directories. While removing these, it will create a backup of the files in a directory on your Desktop.
+- **Usage:** `check_app_leftovers.sh <app_name>`
+- **Example:** `check_app_leftovers.sh MyApp` will check for leftover files of `MyApp` in the following directories:
+  - `~/Library/Application Support/`
+  - `~/Library/Preferences/`
+  - `~/Library/Caches/`
+  - `~/Library/Logs/`
+  - `~/Library/LaunchAgents/`
+- **Good-to-know behavior:**
+  - If the script is run with the `-h` flag, it will display usage
+  - If the backup cannot be created, the files will not be removed.
+  - The backup directory is created with a random name in the format `~/Desktop/?.nosync`, where `?` is a random string.
+- **Arguments:**
+
+| Argument    | Description                               |
+|-------------|-------------------------------------------|
+| `<app_name>` | The name of the application to check for leftovers |
+
 
 ### Copy pattern
 
@@ -94,6 +129,7 @@ This repository contains a collection of Zsh scripts designed to make your life 
 - **Good-to-know behavior:**
   - The pattern is a regex pattern.
   - It uses the `find` command.
+  - For security, it creates a backup of the files before removing them. At the end of execution, it will ask if you want to delete the backups (they are conserved by default).
 - **Arguments:**
 
 | Argument    | Description                               |
@@ -158,3 +194,23 @@ This repository contains a collection of Zsh scripts designed to make your life 
 | `<input_file>` | The input file to be processed |
 | `<output_file>` | The output file to be generated |
 | `<rules>` | The rules for highlighting lines, modeled as a python dictionary |
+
+### Search article
+
+- **File:** `search_article.sh`
+- **Description:** Search for an article in local files or online by specifying the reference tag of its BiBTeX entry (e.g. 'doe2000examples') or filename (e.g. 'doe-examples.pdf').
+Compatible apps: `edge`, `firefox`, `chrome`, `safari` or `acrobat`.
+- **Usage:** `search_article.sh <tag> <app>`
+- **Example:** `search_article.sh doe2000examples acrobat`.
+- **Good-to-know behavior:**
+  - App can only be specified if tag is also specified..
+  - Needs to declare the environment variables `BIB_DIR` and `DATABASE_PATH` to the folder where the bibtex and pdf files are stored, respectively. If the needed variable not declared, it will ask for the path.
+  - If the file is not found in the local folder, it will search for it online using the doi or url from the bibtex file.
+  - Adding `-t` will search for the file by token instead of tag, for example, `search_article.sh -t greatexamples acrobat` will search for an article containing the token `greatexamples` instead of `greatexamples.pdf`.
+
+- **Arguments:**
+
+| Argument    | Description                               |
+|-------------|-------------------------------------------|
+| `<tag>`     | The input file to be processed |
+| `<app>`     | The output file to be generated |
