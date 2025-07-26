@@ -1,23 +1,39 @@
-if [ "$1" == "-h" ]; then
+#!/bin/zsh
+for param in "$@"; do
+  if [ "$param" != "-t" ]; then
+    if [ "$param" = "-h" ]; then
     echo "Usage: remove_recursively <pattern>"
     echo "This script removes all files matching the given pattern in the current directory and its subdirectories."
-    echo "For example, remove_recursively *1.txt will remove all .txt files in the current directory and its subdirectories whose name ends with 1."
+    echo "For example, remove_recursively '*1.txt' will remove all .txt files in the current directory and its subdirectories whose name ends with 1."
+    echo "Adding -t will transform from traditional regex syntax (\d\w(.*)\$1) to sed syntax ([0-9][a-zA-Z](\.*)\1."
+    echo "Remember to add the quotes around the regex patterns to avoid shell expansion!"
     echo "Arguments:"
     echo "    <pattern> : The pattern to match the files to remove"
     exit 0
-fi
+    fi
+    modified_params+=("$param")
+  else
+    transformation=true
+  fi
+done
 
-if [ "$#" -ne 1 ]; then
+if [ "${#modified_params[@]}" -ne 1 ]; then
     echo "Usage: remove_recursively <pattern>"
     echo "(Or use -h for help)"
     exit 1
 fi
 
 local_folder=$(pwd)
-pattern=$1
+pattern=${modified_params[1]}
 iterative=0
 RANDOM_NUMBER=$RANDOM
 backup_folder="$local_folder/$RANDOM_NUMBER"
+
+if [ $transformation = true ]; then
+  echo "Transforming REGEX $pattern"
+  pattern=$(echo "$pattern" | sed -E 's/\\d/[0-9]/' | sed -E 's/\\w/[a-zA-Z]/' | sed -E 's/\$([0-9]+)/\\\1/')
+  echo "    Transformed to $pattern"
+fi
 
 echo "Removing files in $local_folder with pattern $pattern"
 echo ""
@@ -40,7 +56,7 @@ echo "All files matching the pattern:"
 echo "$all_files"
 echo ""
 
-# Process each file
+# Process each file, using IFS to handle spaces in filenames
 IFS=$'\n'
 for file in $all_files; do
     path=$()

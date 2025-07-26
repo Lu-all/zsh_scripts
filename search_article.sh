@@ -1,10 +1,18 @@
 #!/bin/zsh
 
+#################
+# to add compatibility with more apps, modify
+# - parse_app_name
+# - search_compatible_browser / search_compatible_app
+#################
+
 function check_args {
+    # Check help
     if [ "$1" = "-h" ]; then
         help
     fi
 
+    # Assign variables by number of parameters
     if [ "$#" -eq 2 ]; then
         REFERENCE_TAG=$1
         APP=$2
@@ -34,13 +42,18 @@ function check_args {
 }
 
 function check_token {
+    # Check if -t is used
+    # For each paramenter, check if it is -t or -h
     for param in "$@"; do
         if [ "$param" != "-t" ]; then
             if [ "$param" = "-h" ]; then
+            # If -h, print help
                 help
             fi
+            # Else, add to a "other parameters" list
             MODIFIED_PARAMS+=("$param")
         else
+        # If -t, enable searching by token
             BY_TOKEN=true
         fi
     done
@@ -74,7 +87,7 @@ function find_database_path {
             echo "Error: The database path provided does not exist."
             exit 1
         fi
-        # and" export it, saving it for future use
+        # and export it, saving it for future use
         # BUT first check if DATABASE_PATH is already on ~./zshrc
         if ! grep -q "DATABASE_PATH" ~/.zshrc; then
             echo "export DATABASE_PATH=\"$DATABASE_PATH\"" >> ~/.zshrc
@@ -84,6 +97,7 @@ function find_database_path {
     fi
 }
 
+# Find file by token or tag
 function find_file {
     if [ "$BY_TOKEN" = true ]; then
         find_file_by_token
@@ -112,9 +126,49 @@ function find_file_by_token {
     # Search for all entries that contain the token in a .bib file in BIB_PATH
     ALL_ENTRIES=$(awk -v token="$REFERENCE_TAG" 'BEGIN {RS="@"; FS="\n"} $0 ~ token {print "@" $0}' "$BIB_PATH"/*.bib)
     if [ -z "$ALL_ENTRIES" ]; then
+        # No match in bib files, search in names of .pdf files
         echo "⚠ Error: No entry referencing '$REFERENCE_TAG' was found in the bibliography files."
-        exit 1
+        echo "Searching in filenames..."
+        FILEPATH=$(find "$DATABASE_PATH" -type f -name "*$REFERENCE_TAG*.pdf")
+        if [ -z "$FILEPATH" ]; then
+            echo "⚠ Error: No file found. Add the entry to your bibliography files or rename the file to include the token."
+            exit 1
+        else
+            # If it returns more than one file, print them giving a number to each one, and ask the user to select one by number
+            if [[ $(echo "$FILEPATH" | wc -l) -gt 1 ]]; then
+                echo "⚠ Multiple files found!"
+                echo ""
+                echo "$FILEPATH" | nl -w2 -s'. '
+                echo ""
+                echo "Select the file you want (input number):"
+                read -r FILE_NUMBER
+                # Example input: 1
+                if ! [[ "$FILE_NUMBER" =~ ^[0-9]+$ ]]; then
+                    # Not a number, do not bother, probably the user wants to exit
+                    exit 0
+                elif [[ "$FILE_NUMBER" -gt $(echo "$FILEPATH" | wc -l) || "$FILE_NUMBER" -lt 1 ]]; then
+                    # Number out of range
+                    echo "⚠ Error: Not a valid number. Exiting."
+                    exit 2
+                fi
+                # Get filepath
+                FILEPATH=$(echo "$FILEPATH" | sed -n "${FILE_NUMBER}p")
+                OPEN_FILE="y"
+            else
+                # Only one match
+                REFERENCE_TAG=$(basename "$FILEPATH" | sed 's/\.[^.]*$//')
+                echo "   Found $REFERENCE_TAG!"
+                echo "   Open file? (y/N)"
+                read -r OPEN_FILE
+            fi
+            # If the user wants to open the file, call open_app (path already resolved)
+            if [[ "$OPEN_FILE" =~ ^[Yy]$ ]]; then
+                open_app
+            fi
+        fi
+        exit 0
     else
+        # Matches in bib files
         echo "\n%%%%%%%%%%%%%%%%%%%%%%%%%"
         echo "$ALL_ENTRIES"
         echo "\n%%%%%%%%%%%%%%%%%%%%%%%%%"
@@ -139,6 +193,7 @@ function help {
 
 function parse_app_name {
     # Obtain canonical name of the app
+    # add more apps as wanted (example: Skim, Brave, Opera, etc.)
     case "$APP" in
         # App is Microsoft Edge
         edge|Microsoft\ Edge) APP="Microsoft Edge" ;;
@@ -169,6 +224,7 @@ function parse_app_path {
 }
 
 function search_compatible_app {
+    # Search an app the open the file
     search_compatible_browser
     RETURN_BROWSER=$?
     if [ $RETURN_BROWSER -ne 0 ]; then
@@ -182,6 +238,9 @@ function search_compatible_app {
 }
 
 function search_compatible_browser {
+    # Return the first compatible browser found,
+    # searching by Edge (default in Windows) -> Firefox (def. Linux) -> Chrome (most used) -> Safari (def. Mac)
+    # reorder or add more browsers as wanted (example: Brave, Opera, etc.)
     if [ -z "$APP_PATH" ]; then
         parse_app_path
     fi

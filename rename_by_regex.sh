@@ -12,6 +12,7 @@ for param in "$@"; do
         echo "Usage: rename_by_regex <directory> <source_regex> <destination_regex>"
         echo "This command renames all files in the given directory and its subdirectories that match the source regex to the destination regex."
         echo "Adding -t will transform from traditional regex syntax (\d\w(.*)\$1) to sed syntax ([0-9][a-zA-Z](\.*)\1."
+        echo "Remember to add the quotes around the regex patterns to avoid shell expansion!"
         echo "Arguments:"
         echo "<directory>         The directory containing the files to rename."
         echo "<source_regex>      The regex pattern to match the source files. For example: '^5_([0-9]\.*)'"
@@ -41,6 +42,7 @@ if [ ! -d "$DIR" ]; then
   exit 1
 fi
 
+# Transform regex from traditional to sed syntax
 if [ $transformation = true ]; then
   echo "Transforming REGEX $SOURCE_REGEX"
   SOURCE_REGEX=$(echo "$SOURCE_REGEX" | sed -E 's/\\d/[0-9]/' | sed -E 's/\\w/[a-zA-Z]/' | sed -E 's/\$([0-9]+)/\\\1/')

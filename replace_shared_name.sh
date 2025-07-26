@@ -47,7 +47,7 @@ if [ ! -d "$source_folder" ]; then
   exit 1
 fi
 
-# Check if destination exists, create it if not
+# Check if destination exists
 if [ ! -d "$destination" ]; then
   echo "Error: Folder '$destination' does not exist or is empty."; exit 1;
 fi
@@ -56,35 +56,42 @@ echo "Replacing files in $destination with files from $source_folder"
 echo ""
 exit_code=0
 # Process files in the destination folder
+# For each file in destination...
 find "$destination" -type f | while read file; do
   extension="${file##*.}"
   filename="${file##*/}"
   compressed_file="$source_folder/${filename%.*}$pattern.${extension}"
 
+  # Print messages
   if [ "$verbose" = true ]; then
     echo "Checking $destination/$filename"
     echo "Trying to replace with $compressed_file"
   fi
 
   if [ -f "$compressed_file" ]; then
+    # If the file to be copied exists in the source folder
     if cp "$compressed_file" "$(dirname "$file")/$(basename "$file")"; then
       if [ "$verbose" = true ]; then
+        # Successful copy
         echo "Replaced $destination/$filename with $compressed_file"
       fi
     else
+      # Error during copy
       echo "Error: Failed to copy $compressed_file to $(dirname "$file")/$filename"
       exit_code=1
     fi
   else
+    # No file to be copied
     if [ "$verbose" = true ]; then
       echo "No file found for $compressed_file"
     fi
   fi
 
+  # Linebreak for readability
   if [ "$verbose" = true ]; then
     echo ""
   fi
 
   exit $exit_code
-
+# Something went wrong
 done || { echo "Error: Failed to process files in $destination."; exit 1; }

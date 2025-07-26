@@ -14,7 +14,9 @@ This repository contains a collection of Zsh scripts designed to make your life 
 
 - [Zsh Scripts](#zsh-scripts)
   - [Available Scripts](#available-scripts)
+    - [Add alias](#add-alias)
     - [Add to path](#add-to-path)
+    - [Better freeze](#better-freeze)
     - [Check app leftovers](#check-app-leftovers)
     - [Copy pattern](#copy-pattern)
     - [Git combine](#git-combine)
@@ -27,6 +29,26 @@ This repository contains a collection of Zsh scripts designed to make your life 
 
 <!-- /code_chunk_output -->
 
+### Add alias
+
+- **File:** `add_alias.sh`
+- **Description:** Add an alias to the Zsh configuration file.
+- **Usage:** `add_alias.sh <alias_name> '<command>'`
+- **Example** `add_alias example_alias 'echo \"$0\"'`
+  (execute `example_alias` for `echo "$0"`).
+- **Good-to-know behavior:**
+  - Remember to reload (`source ~/.zshrc`) to apply the changes!
+  - It will add the alias to the file specified by the variable `ALIAS_FILE_PATH`.
+    - If it is not set, it will be set with the value `$HOME/.zshrc`.
+  - You should replace all occurrences of `"` with `\"` in the command.
+- **Arguments:**
+
+| Argument      | Description                               |
+|---------------|-------------------------------------------|
+| `<alias_name>` | The name of the alias to be created       |
+| `<command>`    | The command to be executed when the alias is called |
+
+
 ### Add to path
 
 - **File:** `add_to_path.sh`
@@ -35,12 +57,14 @@ This repository contains a collection of Zsh scripts designed to make your life 
 - **Example:** `add_to_path.sh my_script.sh test_script` will make `my_script.sh` available as `test_script`.
 - **Good-to-know behavior:**
   - To add `add_to_path.sh` to the path, you need to manually execute the following commands:
-    ```
+
+    ```sh
     chmod +x add_to_path.sh
     ln -s add_to_path.sh add
     sudo cp add /usr/local/bin/add_to_path
     rm add
     ```
+
   - If the command already exists, it will be overwritten.
   - It creates a temporary file with a random name (it is deleted at the end of execution).
   - The root password is required to copy the soft link created to `/usr/local/bin/`.
@@ -50,6 +74,18 @@ This repository contains a collection of Zsh scripts designed to make your life 
 |---------------------|-------------------------------------------|
 | `<source_file>`     | The **executable** file to be added to the path |
 | `<name_of_command>` | The name of the command to be created |
+
+
+### Better freeze
+
+- **File:** `better_freeze.sh`
+- ***Description:** This script generates a `requirements.txt` file with the current Python environment's packages, the time of creation of the requirements file, and the Python version used in the virtual environment.
+- **Usage:** `better_freeze.sh`
+- ***Good-to-know behavior:**
+  - This script should be run inside a virtual environment.
+  - It uses `pipdeptree` to create a detailed list of dependencies.
+  - If `pipdeptree` is not installed, it will fall back to `pip freeze`.
+  - If the script is run with the `-h` flag, it will display usage.
 
 ### Check app leftovers
 
@@ -123,11 +159,12 @@ This repository contains a collection of Zsh scripts designed to make your life 
 ### Remove recursively
 
 - **File:** `remove_recursively.sh`
-- **Description:** This script removes all files matching the given pattern in the current directory and its subdirectories.
-- **Usage:** `remove_recursively.sh <pattern>`
-- **Example:** `remove_recursively.sh *1.txt` will remove all .txt files in the current directory and its subdirectories whose names end with 1.
+- **Description:** This script removes all files matching the given pattern in the current directory and its subdirectories. Adding -t will transform from traditional RegEx syntax `(\d\w(.*)\$1)` to sed's syntax `([0-9][a-zA-Z](\.*)\1`.
+- **Usage:** `remove_recursively.sh '<pattern>'`
+- **Example:** `remove_recursively.sh '*1.txt'` will remove all .txt files in the current directory and its subdirectories whose names end with 1.
 - **Good-to-know behavior:**
   - The pattern is a regex pattern.
+  - Remember to add the quotes around the regex patterns to avoid shell expansion!
   - It uses the `find` command.
   - For security, it creates a backup of the files before removing them. At the end of execution, it will ask if you want to delete the backups (they are conserved by default).
 - **Arguments:**
@@ -140,10 +177,12 @@ This repository contains a collection of Zsh scripts designed to make your life 
 
 - **File:** `rename_by_regex.sh`
 - **Description:** This command renames all files in the given directory and its subdirectories that match the source regex to the destination regex. Adding -t will transform from traditional RegEx syntax `(\d\w(.*)\$1)` to sed's syntax `([0-9][a-zA-Z](\.*)\1`.
-- **Usage:** `rename_by_regex <directory> <source_regex> <destination_regex>`
+- **Usage:** `rename_by_regex <directory> '<source_regex>' '<destination_regex>'`
 - **Example:** `rename_by_regex.sh example '^5_([0-9]\.*) '4_\1'` will rename all files starting with "5_" in /example and its subdirectories to "4_", followed by the rest of the name.
 - **Good-to-know behavior:**
   - The pattern is a regex pattern.
+  - Remember to add the quotes around the regex patterns to avoid shell expansion!
+  - It uses the `find` command.
   - For security, it creates a backup of the files before renaming them. At the end of execution, it will ask if you want to delete the backups (they are conserved by default).
   - If two files are going to be named the same:
     - In Mac: the script will add a number to the end of the file name.
@@ -203,10 +242,13 @@ Compatible apps: `edge`, `firefox`, `chrome`, `safari` or `acrobat`.
 - **Usage:** `search_article.sh <tag> <app>`
 - **Example:** `search_article.sh doe2000examples acrobat`.
 - **Good-to-know behavior:**
-  - App can only be specified if tag is also specified..
+  - App can only be specified if tag is also specified.
   - Needs to declare the environment variables `BIB_DIR` and `DATABASE_PATH` to the folder where the bibtex and pdf files are stored, respectively. If the needed variable not declared, it will ask for the path.
   - If the file is not found in the local folder, it will search for it online using the doi or url from the bibtex file.
   - Adding `-t` will search for the file by token instead of tag, for example, `search_article.sh -t greatexamples acrobat` will search for an article containing the token `greatexamples` instead of `greatexamples.pdf`.
+  - To add compatibility with more apps, modify the following functions:
+    - `parse_app_name`
+    - `search_compatible_browser` or `search_compatible_app`
 
 - **Arguments:**
 
