@@ -7,22 +7,17 @@ modified_params=()
 iterative=0
 
 for param in "$@"; do
-  if [ "$param" != "-t" ]; then
     if [ "$param" = "-h" ]; then
         echo "Usage: rename_by_regex <directory> <source_regex> <destination_regex>"
         echo "This command renames all files in the given directory and its subdirectories that match the source regex to the destination regex."
-        echo "Adding -t will transform from traditional regex syntax (\d\w(.*)\$1) to sed syntax ([0-9][a-zA-Z](\.*)\1."
         echo "Remember to add the quotes around the regex patterns to avoid shell expansion!"
         echo "Arguments:"
         echo "<directory>         The directory containing the files to rename."
         echo "<source_regex>      The regex pattern to match the source files. For example: '^5_([0-9]\.*)'"
         echo "<destination_regex> The regex pattern to rename the files. For example '4_\1'"
-        echo "-t                  Transform regular expression syntax."
         exit 0
-    fi
-    modified_params+=("$param")
   else
-    transformation=true
+    modified_params+=("$param")
   fi
 done
 
@@ -40,17 +35,6 @@ DESTINATION_REGEX=${modified_params[3]}
 if [ ! -d "$DIR" ]; then
   echo "Error: Directory '$DIR' does not exist." >&2
   exit 1
-fi
-
-# Transform regex from traditional to sed syntax
-if [ $transformation = true ]; then
-  echo "Transforming REGEX $SOURCE_REGEX"
-  SOURCE_REGEX=$(echo "$SOURCE_REGEX" | sed -E 's/\\d/[0-9]/' | sed -E 's/\\w/[a-zA-Z]/' | sed -E 's/\$([0-9]+)/\\\1/')
-  echo "    Transformed to $SOURCE_REGEX"
-
-  echo "Transforming REGEX $DESTINATION_REGEX"
-  DESTINATION_REGEX=$(echo "$DESTINATION_REGEX" | sed -E 's/\\d/[0-9]/g;s/\\w/[a-zA-Z]/g;s/\$([0-9]+)/\\\1/g')
-  echo "    Transformed to $DESTINATION_REGEX"
 fi
 
 # Obtain a random number

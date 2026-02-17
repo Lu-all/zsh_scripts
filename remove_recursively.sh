@@ -1,19 +1,16 @@
 #!/bin/zsh
+
 for param in "$@"; do
-  if [ "$param" != "-t" ]; then
-    if [ "$param" = "-h" ]; then
+  if [ "$param" = "-h" ]; then
     echo "Usage: remove_recursively <pattern>"
     echo "This script removes all files matching the given pattern in the current directory and its subdirectories."
     echo "For example, remove_recursively '*1.txt' will remove all .txt files in the current directory and its subdirectories whose name ends with 1."
-    echo "Adding -t will transform from traditional regex syntax (\d\w(.*)\$1) to sed syntax ([0-9][a-zA-Z](\.*)\1."
     echo "Remember to add the quotes around the regex patterns to avoid shell expansion!"
     echo "Arguments:"
     echo "    <pattern> : The pattern to match the files to remove"
     exit 0
-    fi
-    modified_params+=("$param")
   else
-    transformation=true
+    modified_params+=("$param")
   fi
 done
 
@@ -25,15 +22,12 @@ fi
 
 local_folder=$(pwd)
 pattern=${modified_params[1]}
+if [ -z "$pattern" ]; then
+	pattern=${modified_params[0]}
+fi
 iterative=0
 RANDOM_NUMBER=$RANDOM
 backup_folder="$local_folder/$RANDOM_NUMBER"
-
-if [ $transformation = true ]; then
-  echo "Transforming REGEX $pattern"
-  pattern=$(echo "$pattern" | sed -E 's/\\d/[0-9]/' | sed -E 's/\\w/[a-zA-Z]/' | sed -E 's/\$([0-9]+)/\\\1/')
-  echo "    Transformed to $pattern"
-fi
 
 echo "Removing files in $local_folder with pattern $pattern"
 echo ""
@@ -57,9 +51,8 @@ echo "$all_files"
 echo ""
 
 # Process each file, using IFS to handle spaces in filenames
-IFS=$'\n'
-for file in $all_files; do
-    path=$()
+# Split on newlines (zsh): use the (f) flag to split the string into lines
+for file in ${(f)all_files}; do
     filename=$(basename "$file")
     file=$(find "$local_folder" -name "$filename" -print0 | head -n 1)
     basedirname=$(dirname "$file")
@@ -81,10 +74,7 @@ for file in $all_files; do
 
             # Remove the file
             echo "Removing file: $file"
-            if ! rm "$file"; then
-                echo "Error: Failed to remove '$file'." >&2
-                exit 2
-            fi
+            rm "$file" || { echo "Error: Failed to remove '$file'." >&2; continue; }
         else
             echo "Skipping non-file: $file"
         fi

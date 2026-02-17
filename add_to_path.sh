@@ -1,4 +1,6 @@
-if [ "$1" == "-h" ]; then
+#!/bin/zsh
+
+if [ "$1" = "-h" ]; then
     echo "Usage: add_to_path <source_file> <name_of_command>"
     echo "Add an internal script <source_file> to path so it can be launched from ✨anywhere✨ as the command <name_of_command>"
     echo "(Needs ROOT permissions)"

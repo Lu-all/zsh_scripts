@@ -29,3 +29,6 @@ echo "Installing dependencies..."
 # Install the Python script for reprint
 echo "   Installing reprint.py"
 sudo add_to_path ./reprint/reprint.py reprint.py
+# Install the Python script for color functions
+echo "   Installing adjust_lightness.py"
+sudo add_to_path ./colorfun/adjust_lightness.py adjust_lightness.py

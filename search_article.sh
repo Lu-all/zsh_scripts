@@ -42,10 +42,12 @@ function check_args {
 }
 
 function check_token {
-    # Check if -t is used
-    # For each paramenter, check if it is -t or -h
+    # Check if -t or -l is used
+    # For each parameter, check if it is -t, -l or -h
     for param in "$@"; do
-        if [ "$param" != "-t" ]; then
+        if [ "$param" = "-l" ]; then
+            STAY_LOCAL=true
+        elif [ "$param" != "-t" ]; then
             if [ "$param" = "-h" ]; then
             # If -h, print help
                 help
@@ -99,7 +101,9 @@ function find_database_path {
 
 # Find file by token or tag
 function find_file {
-    if [ "$BY_TOKEN" = true ]; then
+    if [ "$STAY_LOCAL" = true ]; then
+        find_file_locally
+    elif [ "$BY_TOKEN" = true ]; then
         find_file_by_token
     else
         find_file_by_tag
@@ -176,6 +180,51 @@ function find_file_by_token {
     fi
 }
 
+function find_file_locally {
+    # Strip the extension from reference tag
+    REFERENCE_TAG=$(echo "$REFERENCE_TAG" | sed 's/\.[^.]*$//')
+
+    # find recursively the file that has the same name, ending with ".pdf"
+    FILEPATH=$(find -E "$DATABASE_PATH" -type f -name "$REFERENCE_TAG")
+    if [ -z "$FILEPATH" ]; then
+        echo "⚠ Error: No file found. Download the article to your database PDF files or rename the desired file to include the term."
+        exit 1
+    else
+        # If it returns more than one file, print them giving a number to each one, and ask the user to select one by number
+        if [[ $(echo "$FILEPATH" | wc -l) -gt 1 ]]; then
+            echo "⚠ Multiple files found!"
+            echo ""
+            echo "$FILEPATH" | nl -w2 -s'. '
+            echo ""
+            echo "Select the file you want (input number):"
+            read -r FILE_NUMBER
+            # Example input: 1
+            if ! [[ "$FILE_NUMBER" =~ ^[0-9]+$ ]]; then
+                # Not a number, do not bother, probably the user wants to exit
+                exit 0
+            elif [[ "$FILE_NUMBER" -gt $(echo "$FILEPATH" | wc -l) || "$FILE_NUMBER" -lt 1 ]]; then
+                # Number out of range
+                echo "⚠ Error: Not a valid number. Exiting."
+                exit 2
+            fi
+            # Get filepath
+            FILEPATH=$(echo "$FILEPATH" | sed -n "${FILE_NUMBER}p")
+            OPEN_FILE="y"
+        else
+            # Only one match
+            REFERENCE_TAG=$(basename "$FILEPATH" | sed 's/\.[^.]*$//')
+            echo "   Found $REFERENCE_TAG!"
+            echo "   Open file? (y/N)"
+            read -r OPEN_FILE
+        fi
+        # If the user wants to open the file, call open_app (path already resolved)
+        if [[ "$OPEN_FILE" =~ ^[Yy]$ ]]; then
+            open_app
+        fi
+    fi
+    exit 0
+}
+
 function help {
     echo "Search for an article in local files or online by specifying the reference tag of its BiBTeX entry (e.g. 'doe2000examples') or filename (e.g. 'doe-examples.pdf')"
     echo "App can only be specified if tag is also specified"
@@ -188,27 +237,43 @@ function help {
     echo "Options:"
     echo "    -h : Show this help message"
     echo "    -t : Search by token instead of tag"
+    echo "    -l : Stay local, do not search online if not found locally"
     exit 0
 }
 
 function parse_app_name {
     # Obtain canonical name of the app
     # add more apps as wanted (example: Skim, Brave, Opera, etc.)
-    case "$APP" in
+    if [ -z "$APP_PATH" ]; then
+        parse_app_path
+    fi
+    lowercase_app=$(echo "$APP" | tr '[:upper:]' '[:lower:]')
+    case "$lowercase_app" in
         # App is Microsoft Edge
-        edge|Microsoft\ Edge) APP="Microsoft Edge" ;;
+        edge|microsoft\ edge) APP="Microsoft Edge" ;;
         # App is Firefox
-        firefox|Firefox) APP="Firefox" ;;
+        firefox|firefox) APP="Firefox" ;;
         # App is Google Chrome
-        chrome|Google\ Chrome) APP="Google Chrome" ;;
+        chrome|google\ chrome) APP="Google Chrome" ;;
         # App is Safari
-        safari|Safari) APP="Safari" ;;
+        safari) APP="Safari" ;;
         # App is Acrobat
-        acrobat|Adobe\ Acrobat\ Reader) APP="Adobe Acrobat Reader" ;;
+        adobe|acrobat|adobe\ acrobat|adobe\ acrobat\ reader)
+        # Check if Acrobat or Acrobat Reader
+        if ! find "$APP_PATH"/Adobe\ Acrobat\ Reader* -maxdepth 1 > /dev/null 2>&1; then
+            if ! find "$APP_PATH"/Adobe\ Acrobat* -maxdepth 1 > /dev/null 2>&1; then
+                echo "Error: App $APP not supported. Searching for a compatible app..."
+                APP=""
+            else
+                APP="Adobe Acrobat"
+            fi
+        else
+            APP="Adobe Acrobat Reader"
+        fi ;;
         *)
-            echo "Error: App $APP not supported. Searching for a compatible app..."
-            APP=""
-            ;;
+        echo "Error: App $APP not supported. Searching for a compatible app..."
+        APP=""
+        ;;
     esac
 }
 
@@ -224,15 +289,22 @@ function parse_app_path {
 }
 
 function search_compatible_app {
+    if [ -z "$APP_PATH" ]; then
+        parse_app_path
+    fi
     # Search an app the open the file
     search_compatible_browser
     RETURN_BROWSER=$?
     if [ $RETURN_BROWSER -ne 0 ]; then
-        if ! find "$APP_PATH"/Adobe\ Acrobat\ Reader* -maxdepth 1 > /dev/null 2>&1; then
+        if ! find "$APP_PATH"/Adobe\ Acrobat* -maxdepth 1 > /dev/null 2>&1; then
             echo "Error: No supported app found (edge, firefox, chrome, safari, or acrobat). Is this a supported OS?"
             exit 1
         else
-            APP="Adobe Acrobat Reader"
+            if ! find "$APP_PATH"/Adobe\ Acrobat\ Reader* -maxdepth 1 > /dev/null 2>&1; then
+                APP="Adobe Acrobat"
+            else
+                APP="Adobe Acrobat Reader"
+            fi
         fi
     fi
 }
@@ -244,22 +316,22 @@ function search_compatible_browser {
     if [ -z "$APP_PATH" ]; then
         parse_app_path
     fi
-    if ! find "$APP_PATH"/Microsoft\ Edge* -maxdepth 1 > /dev/null 2>&1; then
-        if ! find "$APP_PATH"/Firefox* -maxdepth 1 > /dev/null 2>&1; then
-            if ! find "$APP_PATH"/Google\ Chrome* -maxdepth 1 > /dev/null 2>&1; then
+    if ! find "$APP_PATH"/Firefox* -maxdepth 1 > /dev/null 2>&1; then
+        if ! find "$APP_PATH"/Google\ Chrome* -maxdepth 1 > /dev/null 2>&1; then
+            if ! find "$APP_PATH"/Microsoft\ Edge* -maxdepth 1 > /dev/null 2>&1; then
                 if ! find "$APP_PATH"/Safari* -maxdepth 1 > /dev/null 2>&1; then
                     return 1
                 else
                     APP="Safari"
                 fi
             else
-                APP="Google Chrome"
+                APP="Microsoft Edge"
             fi
         else
-            APP="Firefox"
+            APP="Google Chrome"
         fi
     else
-        APP="Microsoft Edge"
+        APP="Firefox"
     fi
 }
 
@@ -279,6 +351,9 @@ function search_online {
         if [ -n "$URL" ]; then
             echo "     Found URL: $URL"
             FILEPATH=$URL
+            if [[ "$FILEPATH" != http* ]]; then
+                FILEPATH="https://"$FILEPATH
+            fi
         elif [ -n "$DOI" ]; then
             echo "     Found DOI: https://doi.org/$DOI"
             FILEPATH="https://doi.org/"$DOI
@@ -308,7 +383,7 @@ function open_app {
         search_compatible_app
     fi
 
-    echo "Opening $APP ..."
+    echo "Opening $FILEPATH with $APP ..."
     open -a "$APP" "$FILEPATH" || { echo "Error: Failed to open $FILEPATH with $APP."; exit 1; }
 }
 
